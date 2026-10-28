@@ -1,0 +1,20 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function activeAccount() {
+      return request.auth != null && request.auth.token.accountStatus == 'active';
+    }
+
+    match /applications/{uid}/{applicationId}/{fileName} {
+      allow read: if activeAccount()
+        && (request.auth.uid == uid || request.auth.token.permissions.hasAny(['documents:read']));
+      allow write: if activeAccount()
+        && request.auth.uid == uid
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('application/pdf|image/jpeg|image/png');
+    }
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
